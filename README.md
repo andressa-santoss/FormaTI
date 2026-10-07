@@ -16,8 +16,8 @@ A FormaTI é uma plataforma de formação em tecnologia composta por uma área p
 
 ### Acesso de demonstração
 
-- Usuário: `admin@formati.com`
-- Senha: `admin123`
+- Usuário: `***`
+- Senha: `***`
 
 ### Entradas administrativas
 
