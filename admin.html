@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FormaTI | Painel Administrativo</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body class="admin-shell">
+  <header class="admin-topbar">
+    <a class="brand" href="admin.html">Forma<span>TI</span></a>
+    <div class="admin-top-title"><span>PAINEL ADMINISTRATIVO</span></div>
+    <div class="admin-user">
+      <div><strong id="adminName">Administrador</strong><small id="adminRole">Administrador</small></div><button
+        class="user-chip" onclick="adminLogout()">Sair</button>
+    </div>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <button class="side-link active" data-section="overview"><span>▦</span> Visão geral</button>
+      <button class="side-link" data-section="tracks"><span>◈</span> Trilhas</button>
+      <button class="side-link" data-section="trainings"><span>⌘</span> Treinamentos</button>
+      <button class="side-link" data-section="materials"><span>▤</span> Conteúdos</button>
+      <div class="sidebar-bottom"><a href="dashboard.html">← Ir para área do aluno</a></div>
+    </aside>
+    <main class="admin-main">
+      <section id="section-overview" class="admin-section active">
+        <div class="admin-heading">
+          <div>
+            <p class="eyebrow">VISÃO GERAL</p>
+            <h1>Olá, <span id="welcomeAdmin">Administrador</span></h1>
+            <p class="muted">Gerencie a estrutura de formação publicada na plataforma.</p>
+          </div><button class="btn primary" onclick="openTrackEditor()">+ Nova trilha</button>
+        </div>
+        <section class="admin-stats">
+          <div><strong id="statTracks">0</strong><span>Trilhas</span></div>
+          <div><strong id="statTrainings">0</strong><span>Treinamentos</span></div>
+          <div><strong id="statPublished">0</strong><span>Treinamentos publicados</span></div>
+          <div><strong id="statDrafts">0</strong><span>Treinamentos em rascunho</span></div>
+        </section>
+        <div class="admin-dashboard-grid">
+          <div class="admin-panel">
+            <div class="panel-heading">
+              <div><strong>Trilhas recentes</strong><span>Estrutura de aprendizagem</span></div><button class="text-btn"
+                onclick="showSection('tracks')">Ver todas</button>
+            </div>
+            <div id="overviewTracks"></div>
+          </div>
+          <div class="admin-panel">
+            <div class="panel-heading">
+              <div><strong>Treinamentos recentes</strong><span>Conteúdos publicados e em edição</span></div><button
+                class="text-btn" onclick="showSection('trainings')">Ver todos</button>
+            </div>
+            <div id="overviewTrainings"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-tracks" class="admin-section">
+        <div class="admin-heading">
+          <div>
+            <p class="eyebrow">ESTRUTURA</p>
+            <h1>Gestão de Trilhas</h1>
+            <p class="muted">Crie trilhas, organize treinamentos e controle a publicação.</p>
+          </div><button class="btn primary" onclick="openTrackEditor()">+ Nova trilha</button>
+        </div>
+        <div class="admin-toolbar">
+          <div class="search"><span>⌕</span><input id="trackSearch" placeholder="Buscar trilha..."
+              oninput="renderTracks()"></div><select id="trackFilter" onchange="renderTracks()">
+            <option value="all">Todos os status</option>
+            <option value="published">Publicadas</option>
+            <option value="draft">Rascunhos</option>
+          </select>
+        </div>
+        <div id="trackList" class="admin-list"></div>
+      </section>
+
+      <section id="section-trainings" class="admin-section">
+        <div class="admin-heading">
+          <div>
+            <p class="eyebrow">CONTEÚDO FORMATIVO</p>
+            <h1>Gestão de Treinamentos</h1>
+            <p class="muted">Crie aulas, vídeos, materiais e organize a ordem dentro das trilhas.</p>
+          </div><button class="btn primary" onclick="openTrainingEditor()">+ Novo treinamento</button>
+        </div>
+        <div class="admin-toolbar">
+          <div class="search"><span>⌕</span><input id="trainingSearch" placeholder="Buscar treinamento..."
+              oninput="renderTrainings()"></div><select id="trainingFilter" onchange="renderTrainings()">
+            <option value="all">Todos os status</option>
+            <option value="published">Publicados</option>
+            <option value="draft">Rascunhos</option>
+          </select>
+        </div>
+        <div id="trainingList" class="admin-list"></div>
+      </section>
+
+      <section id="section-materials" class="admin-section">
+        <div class="admin-heading">
+          <div>
+            <p class="eyebrow">BIBLIOTECA</p>
+            <h1>Conteúdos</h1>
+            <p class="muted">Visualize rapidamente vídeos, PDFs e materiais cadastrados.</p>
+          </div>
+        </div>
+        <div id="materialList" class="material-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Editor de trilha -->
+  <div id="trackOverlay" class="admin-overlay">
+    <aside class="editor-panel">
+      <div class="editor-header">
+        <div>
+          <p class="eyebrow">EDITOR DE TRILHA</p>
+          <h2 id="trackEditorTitle">Nova trilha</h2>
+        </div><button class="close-btn" onclick="closeTrackEditor()">×</button>
+      </div>
+      <form id="trackForm"><input type="hidden" id="trackId"><label>Nome da trilha<input id="trackTitle" required
+            placeholder="Ex.: Formação em Tecnologia para Professores"></label><label>Descrição<textarea
+            id="trackDescription" rows="4" placeholder="Objetivo e público da trilha"></textarea></label>
+        <div class="form-grid"><label>Nível<select id="trackLevel">
+              <option>Iniciante</option>
+              <option>Intermediário</option>
+              <option>Avançado</option>
+            </select></label><label>Carga horária<input id="trackHours" type="number" min="1" value="10"></label></div>
+        <label>Imagem da trilha<input id="trackImage" type="url" placeholder="https://.../imagem.jpg"></label>
+        <div class="editor-section">
+          <div class="section-title">
+            <div><strong>Treinamentos da trilha</strong>
+              <p>Use ↑ e ↓ para definir a ordem apresentada ao aluno.</p>
+            </div><button type="button" class="btn secondary"
+              onclick="openTrainingEditor('', document.getElementById('trackId').value)">+ Novo treinamento</button>
+          </div>
+          <div id="trackTrainingOrder"></div>
+        </div>
+        <div class="publish-box">
+          <div><strong>Publicação</strong>
+            <p id="trackPublishText">Esta trilha ficará salva como rascunho.</p>
+          </div><label class="switch"><input id="trackPublished" type="checkbox"
+              onchange="updateTrackPublishText()"><span></span></label>
+        </div>
+        <div class="editor-actions"><button type="button" class="btn secondary"
+            onclick="closeTrackEditor()">Cancelar</button><button class="btn primary" type="submit">Salvar
+            trilha</button></div>
+      </form>
+    </aside>
+  </div>
+
+  <!-- Editor de treinamento -->
+  <div id="trainingOverlay" class="admin-overlay">
+    <aside class="editor-panel">
+      <div class="editor-header">
+        <div>
+          <p class="eyebrow">EDITOR DE TREINAMENTO</p>
+          <h2 id="trainingEditorTitle">Novo treinamento</h2>
+        </div><button class="close-btn" onclick="closeTrainingEditor()">×</button>
+      </div>
+      <form id="trainingForm"><input type="hidden" id="trainingId"><label>Título<input id="trainingTitle" required
+            placeholder="Ex.: Segurança Digital na Prática"></label>
+        <div class="form-grid"><label>Trilha<select id="trainingTrack"></select></label><label>Nível<select
+              id="trainingLevel">
+              <option>Iniciante</option>
+              <option>Intermediário</option>
+              <option>Avançado</option>
+            </select></label></div><label>Descrição<textarea id="trainingDescription" rows="4"
+            placeholder="O que o aluno aprenderá nesta formação?"></textarea></label>
+        <div class="form-grid"><label>Carga horária<input id="trainingHours" type="number" min="1"
+              value="1"></label><label>Imagem<input id="trainingImage" type="url"
+              placeholder="https://.../imagem.jpg"></label></div>
+        <div class="editor-section">
+          <div class="section-title">
+            <div><strong>Conteúdos</strong>
+              <p>Cadastre vídeos, PDFs, links e materiais complementares.</p>
+            </div><button type="button" class="btn secondary" onclick="addTrainingContent()">+ Adicionar
+              conteúdo</button>
+          </div>
+          <div id="trainingContentEditor"></div>
+        </div>
+        <div class="editor-section">
+          <div class="section-title">
+            <div><strong>Quiz do treinamento</strong>
+              <p>Crie perguntas com base nos materiais. A 1ª alternativa é a correta; o aluno as vê embaralhadas.</p>
+            </div><button type="button" class="btn secondary" onclick="addQuizQuestion()">+ Adicionar pergunta</button>
+          </div>
+          <div id="trainingQuizEditor"></div>
+        </div>
+        <div class="editor-section">
+          <div class="section-title">
+            <div><strong>Materiais de consulta</strong>
+              <p>Links ou documentos complementares.</p>
+            </div>
+          </div><label class="upload-box"><input id="trainingFiles" type="file" multiple
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xlsx,.zip"><span>＋ Selecionar documentos</span><small>Os nomes dos
+              arquivos ficam registrados no protótipo.</small></label>
+          <div id="trainingFileList" class="file-list"></div>
+        </div>
+        <div class="publish-box">
+          <div><strong>Publicação</strong>
+            <p id="trainingPublishText">Este treinamento ficará salvo como rascunho.</p>
+          </div><label class="switch"><input id="trainingPublished" type="checkbox"
+              onchange="updateTrainingPublishText()"><span></span></label>
+        </div>
+        <div class="editor-actions"><button type="button" class="btn secondary"
+            onclick="closeTrainingEditor()">Cancelar</button><button class="btn primary" type="submit">Salvar
+            treinamento</button></div>
+      </form>
+    </aside>
+  </div>
+  <script src="js/store.js"></script>
+  <script src="js/admin-auth.js"></script>
+  <script src="js/admin-panel.js"></script>
+</body>
+
+</html>

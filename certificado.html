@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FormaTI | Certificado</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <header class="topbar no-print"><a class="brand" href="dashboard.html">Forma<span>TI</span></a>
+        <nav><a href="dashboard.html">Dashboard</a><a href="trilhas.html">Trilhas</a><a class="active"
+                href="certificado.html">Certificados</a></nav><button class="user-chip" onclick="logout()">Sair</button>
+    </header>
+    <main class="certificate-page">
+        <div id="certificate" class="certificate">
+            <div class="cert-brand">FormaTI</div>
+            <p class="eyebrow">CERTIFICADO DE CONCLUSÃO</p>
+            <h1>Certificamos que</h1>
+            <h2 id="certificateName"></h2>
+            <p>concluiu com êxito a formação</p>
+            <h3 id="certTrack"></h3>
+            <p>Demonstrando aproveitamento satisfatório nos conteúdos e na avaliação final.</p>
+            <div class="cert-info"><span><b>Carga horária</b><span
+                        id="certHours"></span></span><span><b>Conclusão</b><span
+                        id="certificateDate"></span></span><span><b>Validação</b><span id="certCode"></span></span>
+            </div>
+            <div class="signature">FormaTI<br><small>Plataforma de Formação em Tecnologia</small></div>
+        </div>
+        <div class="certificate-actions no-print"><button class="btn primary" onclick="window.print()">Baixar / imprimir
+                certificado</button><a class="btn secondary" href="dashboard.html">Voltar ao dashboard</a></div>
+    </main>
+    <script src="js/store.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

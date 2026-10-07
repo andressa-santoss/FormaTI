@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FormaTI | Acesso Administrativo</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body class="admin-auth-page">
+  <main class="admin-auth-card">
+    <div class="brand">Forma<span>TI</span></div>
+    <p class="eyebrow">ACESSO RESTRITO</p>
+    <h1>Painel Administrativo</h1>
+    <p class="muted">Entre com uma conta autorizada para gerenciar trilhas, treinamentos e conteúdos.</p>
+    <div id="loginMessage" class="auth-message" hidden></div>
+    <form id="adminLoginForm" class="form">
+      <label>E-mail ou usuário<input id="adminUser" autocomplete="username" placeholder="admin@formati.com"
+          required></label>
+      <label>Senha<input id="adminPassword" type="password" autocomplete="current-password" placeholder="••••••••"
+          required></label>
+      <button class="btn primary" type="submit">Entrar no painel</button>
+    </form>
+    <button class="forgot-link" type="button" onclick="openRecovery()">Esqueci minha senha</button>
+    <a class="back-public" href="index.html">← Voltar para a plataforma</a>
+  </main>
+  <div id="recoveryModal" class="admin-modal" aria-hidden="true">
+    <div class="modal-card"><button class="close-btn" onclick="closeRecovery()">×</button>
+      <p class="eyebrow">RECUPERAÇÃO DE ACESSO</p>
+      <h2>Recuperar senha</h2>
+      <p class="muted">Informe seu e-mail administrativo. No protótipo, a solicitação será simulada.</p>
+      <form id="recoveryForm" class="form"><label>E-mail<input id="recoveryEmail" type="email"
+            placeholder="admin@formati.com" required></label><button class="btn primary" type="submit">Solicitar
+          recuperação</button></form>
+    </div>
+  </div>
+  <script src="js/admin-auth.js"></script>
+</body>
+
+</html>
