@@ -4,7 +4,6 @@
 
 A FormaTI é uma plataforma de formação em tecnologia composta por uma área pública para alunos e uma área administrativa/CMS para gerenciamento de trilhas, treinamentos e conteúdos.
 
-> A antiga tela de gestão baseada em módulos foi removida e substituída pelo painel administrativo descrito neste documento.
 
 ## 2. Como executar
 
