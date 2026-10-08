@@ -685,16 +685,16 @@ nav a:hover {
 .certificate-page {
     max-width: 1000px;
     margin: auto;
-    padding: 55px 24px
+    padding: 1px 2px
 }
 
 .certificate {
     background: #fff;
     border: 10px solid #ece9fa;
     outline: 1px solid #d8d3ed;
-    padding: 65px;
+    padding: 45px;
     text-align: center;
-    min-height: 650px;
+    min-height: 450px;
     display: flex;
     flex-direction: column;
     align-items: center;
