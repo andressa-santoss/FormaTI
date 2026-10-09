@@ -1016,3 +1016,11 @@ nav a:hover {
         min-height: 100vh
     }
 }
+
+
+/**** DASHBOARD ***/
+
+#dashTracks {
+  display: grid;
+  gap: 50px; /* aumente ou diminua para mudar o espaço entre os cards */
+}
