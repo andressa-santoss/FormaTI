@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FormaTI | Conteúdos</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .filtros {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin: 18px 0 26px;
+        }
+
+        .filtros input,
+        .filtros select {
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff;
+            font: inherit;
+        }
+
+        .filtros input {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .filtros .muted {
+            margin-left: auto;
+        }
+
+        .conteudo-trilha {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .conteudo-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .conteudo-head h2 {
+            margin: 8px 0 0;
+        }
+
+        .conteudo-trilha .module {
+            margin-top: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="topbar"><a class="brand" href="dashboard.html">Forma<span>TI</span></a>
+        <nav><a href="dashboard.html">Inicio</a>
+            <a href="trilhas.html">Trilhas</a>
+            <a href="certificado.html">Certificados</a>
+            <a class="active" href="conteudo.html">Conteúdos</a>
+        </nav>
+        <button class="user-chip" onclick="logout()">Sair</button>
+    </header>
+
+    <main class="container">
+        <div class="page-title">
+            <p class="eyebrow">CONTEÚDOS & MATERIAIS</p>
+            <h1>Materiais de estudo</h1>
+            <p class="muted">Consulte aqui os materiais disponibilizados em cada curso.</p>
+        </div>
+
+        <div class="filtros">
+            <input id="busca" type="search" placeholder="Buscar material pelo título...">
+            <select id="tipo"></select>
+            <span class="muted" id="contagem"></span>
+        </div>
+
+        <div id="conteudoList"></div>
+    </main>
+
+    <script src="js/store.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/conteudo.js"></script>
+</body>
+
+</html>

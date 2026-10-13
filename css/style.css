@@ -1022,5 +1022,7 @@ nav a:hover {
 
 #dashTracks {
   display: grid;
-  gap: 50px; /* aumente ou diminua para mudar o espaço entre os cards */
+  gap: 50px; 
 }
+
+
