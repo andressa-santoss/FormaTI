@@ -16,6 +16,12 @@ function prog(t) { const ids = trackContents(t).map(c => c.id), d = ids.filter(i
 const quizOf = t => { const q = trackTrainings(t).flatMap(x => x.quiz || []), all = q.length ? q : (t.quiz || []); return all.length ? all : null };
 const canQuiz = t => { const p = prog(t); return p.total > 0 && p.pct === 100 };
 const eligible = t => canQuiz(t) && (quizOf(t) ? (getState().scores[t.id] ?? 0) >= 70 : true);
+/* Trilha concluída: com quiz, quando o aluno é aprovado (nota >= 70);
+   sem quiz, quando o certificado é emitido (senão bloquearia ao marcar o último conteúdo). */
+const concluida = t => quizOf(t) ? eligible(t) : !!getState().certs[t.id];
+/* Se a trilha já foi concluída, impede o acesso e manda o aluno de volta ao dashboard. */
+const bloqueiaConcluida = t => { if (concluida(t)) { location.replace("dashboard.html"); return true } return false };
+const botaoConcluido = (extra = "") => `<button type="button" class="btn btn-concluido ${extra}" disabled aria-disabled="true">Concluído</button>`;
 function toggleDone(id) { const s = getState(); s.done = s.done.includes(id) ? s.done.filter(x => x !== id) : [...s.done, id]; saveState(s) }
 const notFound = (m) => `<div class="empty-state">${m} <a href="trilhas.html">Ver trilhas</a></div>`;
 
@@ -26,16 +32,17 @@ function initDashboard() {
     qs("userName").textContent = cap(s.userName);
     qs("statProgress").textContent = (ps.length ? Math.round(ps.reduce((a, p) => a + p.pct, 0) / ps.length) : 0) + "%";
     qs("statAvailable").textContent = ts.length; qs("statCompleted").textContent = ts.filter(eligible).length; qs("statCertificates").textContent = ts.filter(t => s.certs[t.id]).length;
-    box.innerHTML = ts.map((t, i) => `<article class="course-card featured"><div class="course-icon">⌘</div><div class="course-info"><span class="tag">${esc(t.level)}</span><h3>${esc(t.title)}</h3><p>${esc(t.description)}</p><div class="progress-row"><span>Progresso</span><span>${ps[i].pct}%</span></div><div class="progress"><i style="width:${ps[i].pct}%"></i></div></div><a class="btn secondary" href="biblioteca.html?track=${encodeURIComponent(t.id)}">${ps[i].done ? "Continuar" : "Começar"}</a></article>`).join("") || '<div class="empty-state">Nenhuma trilha publicada no momento.</div>'
+    box.innerHTML = ts.map((t, i) => `<article class="course-card featured"><div class="course-icon">⌘</div><div class="course-info"><span class="tag">${esc(t.level)}</span><h3>${esc(t.title)}</h3><p>${esc(t.description)}</p><div class="progress-row"><span>Progresso</span><span>${ps[i].pct}%</span></div><div class="progress"><i style="width:${ps[i].pct}%"></i></div></div>${concluida(t) ? botaoConcluido() : `<a class="btn secondary" href="biblioteca.html?track=${encodeURIComponent(t.id)}">${ps[i].done ? "Continuar" : "Começar"}</a>`}</article>`).join("") || '<div class="empty-state">Nenhuma trilha publicada no momento.</div>'
 }
 
 function initTrilhas() {
     const b = qs("publicTrackList"); if (!b) return;
-    b.innerHTML = pubTracks().map(t => `<article class="course-card"><div class="course-icon purple">◈</div><span class="tag">${esc(t.level)}</span><h3>${esc(t.title)}</h3><p>${esc(t.description)}</p><ul class="meta"><li>${trackTrainings(t).length} treinamentos</li><li>${t.hours || 0}h</li></ul><a class="btn primary full" href="trilha.html?id=${encodeURIComponent(t.id)}">Selecionar trilha</a></article>`).join("") || '<div class="empty-state">Nenhuma trilha publicada no momento.</div>'
+    b.innerHTML = pubTracks().map(t => `<article class="course-card"><div class="course-icon purple">◈</div><span class="tag">${esc(t.level)}</span><h3>${esc(t.title)}</h3><p>${esc(t.description)}</p><ul class="meta"><li>${trackTrainings(t).length} treinamentos</li><li>${t.hours || 0}h</li></ul>${concluida(t) ? botaoConcluido("full") : `<a class="btn primary full" href="trilha.html?id=${encodeURIComponent(t.id)}">Selecionar trilha</a>`}</article>`).join("") || '<div class="empty-state">Nenhuma trilha publicada no momento.</div>'
 }
 
 function initTrilha() {
     const b = qs("publicTrackContent"); if (!b) return; const t = pubTrack(param("id")); if (!t) { b.innerHTML = notFound("Trilha não encontrada ou não publicada."); return }
+    if (bloqueiaConcluida(t)) return;
     const l = trackTrainings(t), p = prog(t), id = encodeURIComponent(t.id);
     b.innerHTML = `<section class="detail-hero"><div><span class="tag">TRILHA • ${esc(t.level)}</span><h1>${esc(t.title)}</h1><p>${esc(t.description)}</p><div class="detail-meta"><span>${l.length} treinamentos</span><span>${p.total} conteúdos</span><span>${t.hours || 0}h estimadas</span></div></div><a class="btn primary" href="biblioteca.html?track=${id}">${p.done ? "Continuar trilha" : "Iniciar trilha"}</a></section><section class="content-two"><div><h2>Treinamentos desta trilha</h2><div class="public-training-list">${l.map((x, i) => `<a class="public-training-row" href="biblioteca.html?track=${id}"><span>${i + 1}</span><div><strong>${esc(x.title)}</strong><small>${(x.contents || []).length} conteúdos</small></div><b>→</b></a>`).join("") || '<p class="muted">Nenhum treinamento publicado nesta trilha.</p>'}</div></div><div class="side-panel"><strong>Como concluir</strong><p>Conclua todos os conteúdos${quizOf(t) ? " e seja aprovado na avaliação final (mínimo de 70%)" : ""}.</p><strong>Certificado</strong><p>Liberado automaticamente ao cumprir os critérios.</p></div></section>`
 }
@@ -43,6 +50,7 @@ function initTrilha() {
 function initBiblioteca() {
     const b = qs("publicTrainingList"); if (!b) return; const t = pubTrack(param("track")), cta = qs("quizCta");
     if (!t) { b.innerHTML = notFound("Trilha não encontrada ou não publicada."); cta.style.display = "none"; return }
+    if (bloqueiaConcluida(t)) return;
     const s = getState(), id = encodeURIComponent(t.id); qs("libTitle").textContent = t.title;
     b.innerHTML = trackTrainings(t).map((x, i) => { const cs = x.contents || [], d = cs.filter(c => s.done.includes(c.id)).length; return `<article class="module"><div class="module-head"><h3>${i + 1}. ${esc(x.title)}</h3><span>${d}/${cs.length}</span></div><div class="lessons">${cs.map(c => { const ok = s.done.includes(c.id); return `<div class="lesson ${ok ? "done" : ""}"><div class="lesson-type">${c.type === "PDF" ? "PDF" : c.type === "Vídeo" ? "▶" : "▤"}</div><div class="lesson-info"><strong>${esc(c.title)}</strong><span>${esc(c.duration || "Material complementar")}</span></div><a class="btn secondary" href="estudo.html?track=${id}&training=${encodeURIComponent(x.id)}&content=${encodeURIComponent(c.id)}">Estudar</a><button class="check" title="Marcar como concluído" onclick="toggleDone('${c.id}');initBiblioteca()">${ok ? "✓" : ""}</button></div>` }).join("")}</div></article>` }).join("") || '<div class="empty-state">Nenhum treinamento publicado nesta trilha.</div>';
     const p = prog(t), ready = canQuiz(t), hasQuiz = !!quizOf(t), a = cta.querySelector("a");
@@ -55,6 +63,8 @@ function initBiblioteca() {
 function initEstudo() {
     const b = qs("publicStudyContent"); if (!b) return; const t = pubTrack(param("track")), x = t && trackTrainings(t).find(y => y.id === param("training")), c = x && (x.contents || []).find(y => y.id === param("content"));
     if (!c) { b.innerHTML = notFound("Conteúdo não encontrado."); return }
+    // trilha concluída: só é possível ver o material pela tela de Conteúdos (modo=consulta)
+    if (param("modo") !== "consulta" && bloqueiaConcluida(t)) return;
     
     const consulta = param("modo") === "consulta";
 const back = consulta ? "conteudo.html" : "biblioteca.html?track=" + encodeURIComponent(t.id);
@@ -71,6 +81,7 @@ if (consulta) qs("backLink").textContent = "← Voltar para conteúdos";
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]] } return a };
 function initQuiz() {
     const form = qs("quizForm"); if (!form) return; const t = pubTrack(param("track")); if (!t) { location.replace("trilhas.html"); return }
+    if (bloqueiaConcluida(t)) return;
     const Q = quizOf(t), id = encodeURIComponent(t.id); if (!Q || !canQuiz(t)) { location.replace("biblioteca.html?track=" + id); return }
     qs("quizTitle").textContent = "Quiz — " + t.title; let current = 0; const titles = Object.fromEntries(trackContents(t).map(c => [c.id, c.title]));
     /* Posição da resposta correta sorteada em "rodadas": só repete uma posição depois de usar todas */
@@ -95,7 +106,7 @@ function initResultado() {
 }
 
 function initCertificado() {
-    const c = qs("certificate"); if (!c) return; const s = getState(), t = pubTrack(param("track")) || pubTracks().find(x => s.certs[x.id]);
+    const c = qs("certificate"); if (!c) return; const s = getState(), t = pubTrack(param("track")) || pubTracks().find(x => eligible(x) && !s.certs[x.id]) || pubTracks().find(x => s.certs[x.id]);
     const acts = document.querySelector(".certificate-actions");
     if (!t || !eligible(t)) { c.innerHTML = '<div class="cert-brand">FormaTI</div><h2>Certificado indisponível</h2><p>Conclua todos os conteúdos e a avaliação final de uma trilha para emitir seu certificado.</p>'; acts.innerHTML = '<a class="btn primary" href="trilhas.html">Ir para as trilhas</a>'; return }
     if (!s.certs[t.id]) { s.certs[t.id] = { date: new Date().toISOString(), code: "FORM-" + new Date().getFullYear() + "-" + Math.random().toString(36).slice(2, 8).toUpperCase() }; saveState(s) }
@@ -152,7 +163,7 @@ function renderConteudos() {
         return `<section class="conteudo-trilha">
       <div class="conteudo-head">
         <div><span class="tag">${esc(t.level)}</span><h2>${esc(t.title)}</h2></div>
-        <a class="btn secondary" href="biblioteca.html?track=${id}">Ir para a trilha</a>
+        ${concluida(t) ? botaoConcluido() : `<a class="btn secondary" href="biblioteca.html?track=${id}">Ir para a trilha</a>`}
       </div>
       
       

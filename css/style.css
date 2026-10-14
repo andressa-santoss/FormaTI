@@ -165,6 +165,16 @@ nav a:hover {
     margin-top: 18px
 }
 
+/* Botão de trilha concluída: cinza e bloqueado */
+.btn.btn-concluido,
+.btn.btn-concluido:hover {
+    background: #e3e3ea;
+    color: #8a8c98;
+    border: 0;
+    cursor: not-allowed;
+    transform: none
+}
+
 .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
