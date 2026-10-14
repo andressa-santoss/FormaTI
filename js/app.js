@@ -55,12 +55,17 @@ function initBiblioteca() {
 function initEstudo() {
     const b = qs("publicStudyContent"); if (!b) return; const t = pubTrack(param("track")), x = t && trackTrainings(t).find(y => y.id === param("training")), c = x && (x.contents || []).find(y => y.id === param("content"));
     if (!c) { b.innerHTML = notFound("Conteúdo não encontrado."); return }
-    const back = "biblioteca.html?track=" + encodeURIComponent(t.id); qs("backLink").href = back;
+    
+    const consulta = param("modo") === "consulta";
+const back = consulta ? "conteudo.html" : "biblioteca.html?track=" + encodeURIComponent(t.id);
+qs("backLink").href = back;
+if (consulta) qs("backLink").textContent = "← Voltar para conteúdos";
+    
     const done = getState().done.includes(c.id), yt = c.type === "Vídeo" ? ytId(c.url) : "", url = safeUrl(c.url); let media;
     if (yt) media = `<div class="youtube-player"><iframe src="https://www.youtube.com/embed/${yt}?rel=0" title="${esc(c.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
     else if (c.type === "PDF" && url) { const src = url.replace(/(drive\.google\.com\/file\/d\/[\w-]+)\/(view|edit).*$/, "$1/preview"); media = `<div class="pdf-viewer"><iframe src="${esc(src)}" title="${esc(c.title)}" allowfullscreen></iframe></div><p class="muted" style="margin-top:10px">Se o PDF não carregar aqui, use “Abrir recurso”: alguns sites bloqueiam a visualização incorporada.</p>` }
     else media = c.type === "Vídeo" ? '<div class="video-placeholder">▶</div>' : `<div class="pdf-placeholder">${c.type === "PDF" ? "Visualização do PDF" : "Material complementar"}</div>`;
-    b.innerHTML = `<div class="study-card"><span class="tag">${esc(c.type)}</span><h1>${esc(c.title)}</h1><p class="muted">${esc(x.title)}</p>${media}${c.type === "Vídeo" && c.url && !yt ? '<div class="video-error">Este vídeo não possui uma URL válida do YouTube cadastrada.</div>' : ""}<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap"><span class="muted">${esc(c.duration || "")}</span>${url && !yt ? `<a class="btn secondary" href="${esc(url)}" target="_blank" rel="noopener">Abrir recurso ↗</a>` : ""}<button class="btn primary" onclick="toggleDone('${c.id}');location.href='${back}'">${done ? "Concluído ✓ (desmarcar)" : "Marcar como concluído"}</button></div></div>`
+    b.innerHTML = `<div class="study-card"><span class="tag">${esc(c.type)}</span><h1>${esc(c.title)}</h1><p class="muted">${esc(x.title)}</p>${media}${c.type === "Vídeo" && c.url && !yt ? '<div class="video-error">Este vídeo não possui uma URL válida do YouTube cadastrada.</div>' : ""}<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap"><span class="muted">${esc(c.duration || "")}</span>${url && !yt ? `<a class="btn secondary" href="${esc(url)}" target="_blank" rel="noopener">Abrir recurso ↗</a>` : ""}${consulta ? (done ? '<span class="tag">✓ Concluído</span>' : "") : `<button class="btn primary" onclick="toggleDone('${c.id}');location.href='${back}'">${done ? "Concluído ✓ (desmarcar)" : "Marcar como concluído"}</button>`}</div></div>`
 }
 
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]] } return a };
@@ -132,7 +137,7 @@ function renderConteudos() {
               <div class="lesson-type">${cIcone(c.type)}</div>
               <div class="lesson-info"><strong>${esc(c.title)}</strong>
                 <span>${esc(c.type)}${c.duration ? " • " + esc(c.duration) : ""}${ok ? " • Concluído" : ""}</span></div>
-              <a class="btn secondary" href="estudo.html?track=${id}&training=${encodeURIComponent(x.id)}&content=${encodeURIComponent(c.id)}">Abrir</a>
+              <a class="btn secondary" href="estudo.html?track=${id}&training=${encodeURIComponent(x.id)}&content=${encodeURIComponent(c.id)}&modo=consulta">Abrir</a>
             </div>`;
             }).join("")}
           ${arquivos.map(f => `<div class="lesson">
