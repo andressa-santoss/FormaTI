@@ -1,3 +1,5 @@
+import { carregarCatalogo, esc, safeUrl, ytId } from "./store.js";
+
 const KEY = "formatiState";
 const defState = { userName: "Aluno", loggedIn: false, done: [], scores: {}, certs: {} };
 const getState = () => { try { return { ...defState, ...JSON.parse(localStorage.getItem(KEY) || "{}") } } catch { return { ...defState } } };
@@ -6,11 +8,15 @@ const qs = id => document.getElementById(id), param = k => new URLSearchParams(l
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 // Sair encerra só a sessão: progresso, notas e certificados são preservados.
 function logout() { const s = getState(); s.loggedIn = false; saveState(s); location.href = "index.html" }
-if (!qs("loginForm") && !getState().loggedIn) location.replace("index.html");
 
-const pubTracks = () => read(TRACK_KEY, seedTracks).filter(t => t.published);
+let dadosTracks = [];
+let dadosTrainings = [];
+
+const pubTracks = () => dadosTracks.filter(t => t.published === true);
 const pubTrack = id => pubTracks().find(t => t.id === id);
-const trackTrainings = t => { const all = read(TRAINING_KEY, seedTrainings); return (t.trainingIds || []).map(i => all.find(x => x.id === i && x.published)).filter(Boolean) };
+const trackTrainings = t => (t.trainingIds || [])
+    .map(id => dadosTrainings.find(x => x.id === id && x.published === true))
+    .filter(Boolean);
 const trackContents = t => trackTrainings(t).flatMap(x => x.contents || []);
 function prog(t) { const ids = trackContents(t).map(c => c.id), d = ids.filter(i => getState().done.includes(i)).length; return { done: d, total: ids.length, pct: ids.length ? Math.round(d / ids.length * 100) : 0 } }
 const quizOf = t => { const q = trackTrainings(t).flatMap(x => x.quiz || []), all = q.length ? q : (t.quiz || []); return all.length ? all : null };
@@ -175,16 +181,6 @@ function renderConteudos() {
     qs("contagem").textContent = total + " material(is)";
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    if (!qs("conteudoList")) return;
-    // opções do filtro = tipos que realmente existem nos conteúdos publicados
-    const tipos = [...new Set(pubTracks().flatMap(t => trackContents(t)).map(c => c.type).filter(Boolean))];
-    qs("tipo").innerHTML = '<option value="">Todos os tipos</option>' +
-        tipos.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
-    qs("busca").addEventListener("input", renderConteudos);
-    qs("tipo").addEventListener("change", renderConteudos);
-    renderConteudos();
-});
 
 function initConteudo() {
     if (!qs("conteudoList")) return;
@@ -197,4 +193,45 @@ function initConteudo() {
     renderConteudos();
 }
 
-document.addEventListener("DOMContentLoaded",()=>{initLogin();initDashboard();initTrilhas();initTrilha();initBiblioteca();initEstudo();initQuiz();initResultado();initCertificado();initConteudo()});
+
+// Disponibiliza funções usadas pelos atributos onclick do HTML.
+Object.assign(window, { logout, toggleDone, initBiblioteca });
+
+document.addEventListener("DOMContentLoaded", async () => {
+    if (!qs("loginForm") && !getState().loggedIn) {
+        location.replace("index.html");
+        return;
+    }
+
+    try {
+        const dados = await carregarCatalogo();
+
+        dadosTracks = dados.tracks || [];
+        dadosTrainings = dados.trainings || [];
+
+        initLogin();
+        initDashboard();
+        initTrilhas();
+        initTrilha();
+        initBiblioteca();
+        initEstudo();
+        initQuiz();
+        initResultado();
+        initCertificado();
+        initConteudo();
+    } catch (erro) {
+        console.error("[FormaTI/app] Erro ao carregar catálogo:", erro);
+
+        const mensagem =
+            "Não foi possível carregar as trilhas agora. Atualize a página e tente novamente.";
+
+        ["publicTrackList", "dashTracks", "publicTrackContent",
+         "publicTrainingList", "conteudoList"].forEach(id => {
+            const elemento = qs(id);
+            if (elemento) {
+                elemento.innerHTML =
+                    `<div class="empty-state">${mensagem}</div>`;
+            }
+        });
+    }
+});
