@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FormaTI | Criar conta</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="auth-page">
+
+    <main class="auth-card">
+
+        <div class="brand">Forma<span>TI</span></div>
+
+        <p class="eyebrow">PLATAFORMA DE FORMAÇÃO</p>
+
+        <h1>Crie sua conta.</h1>
+
+        <p class="muted">
+            Cadastre-se para acessar suas trilhas,
+            materiais, avaliações e certificados.
+        </p>
+
+        <form id="registerForm" class="form">
+
+            <label>
+                Nome completo
+                <input
+                    type="text"
+                    id="registerName"
+                    placeholder="Digite seu nome completo"
+                    required
+                    minlength="3"
+                >
+            </label>
+
+            <label>
+                E-mail
+                <input
+                    type="email"
+                    id="registerEmail"
+                    placeholder="seu@email.com"
+                    required
+                >
+            </label>
+
+            <label>
+                Senha
+                <input
+                    type="password"
+                    id="registerPassword"
+                    placeholder="Mínimo de 6 caracteres"
+                    minlength="6"
+                    required
+                >
+            </label>
+
+            <label>
+                Confirmar senha
+                <input
+                    type="password"
+                    id="confirmPassword"
+                    placeholder="Digite a senha novamente"
+                    minlength="6"
+                    required
+                >
+            </label>
+
+            <button class="btn primary" type="submit">
+                Criar minha conta
+            </button>
+
+            <p id="registerMessage" class="register-message"
+               aria-live="polite"></p>
+
+        </form>
+
+        <p class="register-link">
+            Já possui uma conta?
+            <a href="login.html">Fazer login</a>
+        </p>
+
+        <a class="admin-access-link" href="admin-login.html">
+            Acesso administrativo →
+        </a>
+
+    </main>
+
+    <script>
+        const form = document.getElementById("registerForm");
+
+        form.addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const name = document.getElementById("registerName").value.trim();
+            const email = document.getElementById("registerEmail").value.trim();
+            const password = document.getElementById("registerPassword").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+            const message = document.getElementById("registerMessage");
+
+            message.className = "register-message";
+
+            if (name.length < 3) {
+                message.textContent = "Informe seu nome completo.";
+                message.classList.add("error");
+                return;
+            }
+
+            if (password.length < 6) {
+                message.textContent = "A senha precisa ter pelo menos 6 caracteres.";
+                message.classList.add("error");
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                message.textContent = "As senhas não coincidem.";
+                message.classList.add("error");
+                return;
+            }
+
+            message.textContent =
+                "Interface validada! A integração do cadastro com o Firebase está pendente.";
+
+            message.classList.add("success");
+        });
+    </script>
+
+</body>
+</html>

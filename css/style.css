@@ -1035,4 +1035,54 @@ nav a:hover {
   gap: 50px; 
 }
 
+/* LINK PARA CADASTRO */
+
+.register-link {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 22px;
+}
+
+.register-link a {
+    color: var(--primary);
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.register-link a:hover {
+    text-decoration: underline;
+}
+
+/* MENSAGENS DO CADASTRO */
+
+.register-message {
+    text-align: center;
+    font-size: 13px;
+    margin: 0;
+}
+
+.register-message:empty {
+    display: none;
+}
+
+.register-message.error {
+    color: #dc3545;
+}
+
+.register-message.success {
+    color: var(--success);
+}
+
+/* RESPONSIVIDADE */
+
+@media (max-width: 480px) {
+    .auth-card {
+        padding: 30px 22px;
+    }
+
+    .auth-card h1 {
+        font-size: 29px;
+    }
+}
 
