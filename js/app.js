@@ -1,0 +1,409 @@
+import { carregarCatalogo, esc, safeUrl, ytId } from "./store.js";
+
+const KEY = "formatiState";
+const defState = { userName: "Aluno", loggedIn: false, done: [], scores: {}, certs: {} };
+const getState = () => { try { return { ...defState, ...JSON.parse(localStorage.getItem(KEY) || "{}") } } catch { return { ...defState } } };
+const saveState = s => localStorage.setItem(KEY, JSON.stringify(s));
+const qs = id => document.getElementById(id), param = k => new URLSearchParams(location.search).get(k);
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+// Sair encerra só a sessão: progresso, notas e certificados são preservados.
+function logout() { const s = getState(); s.loggedIn = false; saveState(s); location.href = "index.html" }
+
+let dadosTracks = [];
+let dadosTrainings = [];
+
+const pubTracks = () => dadosTracks.filter(t => t.published === true);
+const pubTrack = id => pubTracks().find(t => t.id === id);
+const trackTrainings = t => (t.trainingIds || [])
+    .map(id => dadosTrainings.find(x => x.id === id && x.published === true))
+    .filter(Boolean);
+const trackContents = t => trackTrainings(t).flatMap(x => x.contents || []);
+function prog(t) { const ids = trackContents(t).map(c => c.id), d = ids.filter(i => getState().done.includes(i)).length; return { done: d, total: ids.length, pct: ids.length ? Math.round(d / ids.length * 100) : 0 } }
+const quizOf = t => { const q = trackTrainings(t).flatMap(x => x.quiz || []), all = q.length ? q : (t.quiz || []); return all.length ? all : null };
+const canQuiz = t => { const p = prog(t); return p.total > 0 && p.pct === 100 };
+const eligible = t => canQuiz(t) && (quizOf(t) ? (getState().scores[t.id] ?? 0) >= 70 : true);
+/* Trilha concluída: com quiz, quando o aluno é aprovado (nota >= 70);
+   sem quiz, quando o certificado é emitido (senão bloquearia ao marcar o último conteúdo). */
+const concluida = t => quizOf(t) ? eligible(t) : !!getState().certs[t.id];
+/* Se a trilha já foi concluída, impede o acesso e manda o aluno de volta ao dashboard. */
+const bloqueiaConcluida = t => { if (concluida(t)) { location.replace("dashboard.html"); return true } return false };
+const botaoConcluido = (extra = "") => `<button type="button" class="btn btn-concluido ${extra}" disabled aria-disabled="true">Concluído</button>`;
+function toggleDone(id) { const s = getState(); s.done = s.done.includes(id) ? s.done.filter(x => x !== id) : [...s.done, id]; saveState(s) }
+const notFound = (m) => `<div class="empty-state">${m} <a href="trilhas.html">Ver trilhas</a></div>`;
+
+function initLogin() { const f = qs("loginForm"); if (!f) return; f.addEventListener("submit", e => { e.preventDefault(); const s = getState(); s.userName = qs("email").value.split("@")[0] || "Aluno"; s.loggedIn = true; saveState(s); location.href = "dashboard.html" }) }
+
+function initDashboard() {
+    const box = qs("dashTracks"); if (!box) return; const s = getState(), ts = pubTracks(), ps = ts.map(prog);
+    qs("userName").textContent = cap(s.userName);
+    qs("statProgress").textContent = (ps.length ? Math.round(ps.reduce((a, p) => a + p.pct, 0) / ps.length) : 0) + "%";
+    qs("statAvailable").textContent = ts.length; qs("statCompleted").textContent = ts.filter(eligible).length; qs("statCertificates").textContent = ts.filter(t => s.certs[t.id]).length;
+    box.innerHTML = ts.map((t, i) => `<article class="course-card featured"><div class="course-icon">⌘</div><div class="course-info"><span class="tag">${esc(t.level)}</span><h3>${esc(t.title)}</h3><p>${esc(t.description)}</p><div class="progress-row"><span>Progresso</span><span>${ps[i].pct}%</span></div><div class="progress"><i style="width:${ps[i].pct}%"></i></div></div>${concluida(t) ? botaoConcluido() : `<a class="btn secondary" href="biblioteca.html?track=${encodeURIComponent(t.id)}">${ps[i].done ? "Continuar" : "Começar"}</a>`}</article>`).join("") || '<div class="empty-state">Nenhuma trilha publicada no momento.</div>'
+}
+
+function initTrilhas() {
+    const b = qs("publicTrackList"); if (!b) return;
+    b.innerHTML = pubTracks().map(t => `<article class="course-card"><div class="course-icon purple">◈</div><span class="tag">${esc(t.level)}</span><h3>${esc(t.title)}</h3><p>${esc(t.description)}</p><ul class="meta"><li>${trackTrainings(t).length} treinamentos</li><li>${t.hours || 0}h</li></ul>${concluida(t) ? botaoConcluido("full") : `<a class="btn primary full" href="trilha.html?id=${encodeURIComponent(t.id)}">Selecionar trilha</a>`}</article>`).join("") || '<div class="empty-state">Nenhuma trilha publicada no momento.</div>'
+}
+
+function initTrilha() {
+    const b = qs("publicTrackContent"); if (!b) return; const t = pubTrack(param("id")); if (!t) { b.innerHTML = notFound("Trilha não encontrada ou não publicada."); return }
+    if (bloqueiaConcluida(t)) return;
+    const l = trackTrainings(t), p = prog(t), id = encodeURIComponent(t.id);
+    b.innerHTML = `<section class="detail-hero"><div><span class="tag">TRILHA • ${esc(t.level)}</span><h1>${esc(t.title)}</h1><p>${esc(t.description)}</p><div class="detail-meta"><span>${l.length} treinamentos</span><span>${p.total} conteúdos</span><span>${t.hours || 0}h estimadas</span></div></div><a class="btn primary" href="biblioteca.html?track=${id}">${p.done ? "Continuar trilha" : "Iniciar trilha"}</a></section><section class="content-two"><div><h2>Treinamentos desta trilha</h2><div class="public-training-list">${l.map((x, i) => `<a class="public-training-row" href="biblioteca.html?track=${id}"><span>${i + 1}</span><div><strong>${esc(x.title)}</strong><small>${(x.contents || []).length} conteúdos</small></div><b>→</b></a>`).join("") || '<p class="muted">Nenhum treinamento publicado nesta trilha.</p>'}</div></div><div class="side-panel"><strong>Como concluir</strong><p>Conclua todos os conteúdos${quizOf(t) ? " e seja aprovado na avaliação final (mínimo de 70%)" : ""}.</p><strong>Certificado</strong><p>Liberado automaticamente ao cumprir os critérios.</p></div></section>`
+}
+
+function initBiblioteca() {
+    const b = qs("publicTrainingList"); if (!b) return; const t = pubTrack(param("track")), cta = qs("quizCta");
+    if (!t) { b.innerHTML = notFound("Trilha não encontrada ou não publicada."); cta.style.display = "none"; return }
+    if (bloqueiaConcluida(t)) return;
+    const s = getState(), id = encodeURIComponent(t.id); qs("libTitle").textContent = t.title;
+    b.innerHTML = trackTrainings(t).map((x, i) => { const cs = x.contents || [], d = cs.filter(c => s.done.includes(c.id)).length; return `<article class="module"><div class="module-head"><h3>${i + 1}. ${esc(x.title)}</h3><span>${d}/${cs.length}</span></div><div class="lessons">${cs.map(c => { const ok = s.done.includes(c.id); return `<div class="lesson ${ok ? "done" : ""}"><div class="lesson-type">${c.type === "PDF" ? "PDF" : c.type === "Vídeo" ? "▶" : "▤"}</div><div class="lesson-info"><strong>${esc(c.title)}</strong><span>${esc(c.duration || "Material complementar")}</span></div><a class="btn secondary" href="estudo.html?track=${id}&training=${encodeURIComponent(x.id)}&content=${encodeURIComponent(c.id)}">Estudar</a><button class="check" title="Marcar como concluído" onclick="toggleDone('${c.id}');initBiblioteca()">${ok ? "✓" : ""}</button></div>` }).join("")}</div></article>` }).join("") || '<div class="empty-state">Nenhum treinamento publicado nesta trilha.</div>';
+    const p = prog(t), ready = canQuiz(t), hasQuiz = !!quizOf(t), a = cta.querySelector("a");
+    qs("libraryPercent").textContent = p.pct + "%"; qs("libraryBar").style.width = p.pct + "%";
+    a.textContent = hasQuiz ? "Iniciar quiz" : "Emitir certificado"; a.href = (hasQuiz ? "quiz.html" : "certificado.html") + "?track=" + id;
+    cta.style.opacity = ready ? 1 : .55; a.style.pointerEvents = ready ? "auto" : "none";
+    cta.querySelector("p").textContent = ready ? (hasQuiz ? "Tudo concluído! Você já pode fazer a avaliação final." : "Tudo concluído! Você já pode emitir o certificado.") : "Conclua todos os conteúdos para liberar " + (hasQuiz ? "o quiz." : "o certificado.")
+}
+
+function initEstudo() {
+    const b = qs("publicStudyContent"); if (!b) return; const t = pubTrack(param("track")), x = t && trackTrainings(t).find(y => y.id === param("training")), c = x && (x.contents || []).find(y => y.id === param("content"));
+    if (!c) { b.innerHTML = notFound("Conteúdo não encontrado."); return }
+    // trilha concluída: só é possível ver o material pela tela de Conteúdos (modo=consulta)
+    if (param("modo") !== "consulta" && bloqueiaConcluida(t)) return;
+    
+    const consulta = param("modo") === "consulta";
+const back = consulta ? "conteudo.html" : "biblioteca.html?track=" + encodeURIComponent(t.id);
+qs("backLink").href = back;
+if (consulta) qs("backLink").textContent = "← Voltar para conteúdos";
+    
+    const done = getState().done.includes(c.id), yt = c.type === "Vídeo" ? ytId(c.url) : "", url = safeUrl(c.url); let media;
+    if (yt) media = `<div class="youtube-player"><iframe src="https://www.youtube.com/embed/${yt}?rel=0" title="${esc(c.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
+    else if (c.type === "PDF" && url) { const src = url.replace(/(drive\.google\.com\/file\/d\/[\w-]+)\/(view|edit).*$/, "$1/preview"); media = `<div class="pdf-viewer"><iframe src="${esc(src)}" title="${esc(c.title)}" allowfullscreen></iframe></div><p class="muted" style="margin-top:10px">Se o PDF não carregar aqui, use “Abrir recurso”: alguns sites bloqueiam a visualização incorporada.</p>` }
+    else media = c.type === "Vídeo" ? '<div class="video-placeholder">▶</div>' : `<div class="pdf-placeholder">${c.type === "PDF" ? "Visualização do PDF" : "Material complementar"}</div>`;
+    b.innerHTML = `<div class="study-card"><span class="tag">${esc(c.type)}</span><h1>${esc(c.title)}</h1><p class="muted">${esc(x.title)}</p>${media}${c.type === "Vídeo" && c.url && !yt ? '<div class="video-error">Este vídeo não possui uma URL válida do YouTube cadastrada.</div>' : ""}<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap"><span class="muted">${esc(c.duration || "")}</span>${url && !yt ? `<a class="btn secondary" href="${esc(url)}" target="_blank" rel="noopener">Abrir recurso ↗</a>` : ""}${consulta ? (done ? '<span class="tag">✓ Concluído</span>' : "") : `<button class="btn primary" onclick="toggleDone('${c.id}');location.href='${back}'">${done ? "Concluído ✓ (desmarcar)" : "Marcar como concluído"}</button>`}</div></div>`
+}
+
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]] } return a };
+function initQuiz() {
+    const form = qs("quizForm"); if (!form) return; const t = pubTrack(param("track")); if (!t) { location.replace("trilhas.html"); return }
+    if (bloqueiaConcluida(t)) return;
+    const Q = quizOf(t), id = encodeURIComponent(t.id); if (!Q || !canQuiz(t)) { location.replace("biblioteca.html?track=" + id); return }
+    qs("quizTitle").textContent = "Quiz — " + t.title; let current = 0; const titles = Object.fromEntries(trackContents(t).map(c => [c.id, c.title]));
+    /* Posição da resposta correta sorteada em "rodadas": só repete uma posição depois de usar todas */
+    let bag = []; const pos = n => { if (!bag.length) bag = shuffle([0, 1, 2, 3]); return Math.min(bag.pop(), n - 1) };
+    const order = q => { const w = shuffle(q.o.map((o, j) => ({ o, j })).slice(1)); w.splice(pos(q.o.length), 0, { o: q.o[0], j: 0 }); return w };
+    form.innerHTML = Q.map((q, i) => `<div class="question ${i === 0 ? "active" : ""}"><p class="eyebrow">QUESTÃO ${i + 1} DE ${Q.length}</p><h2>${esc(q.q)}</h2>${q.src && titles[q.src] ? `<p class="muted">Baseada em: ${esc(titles[q.src])}</p>` : ""}<div class="options">${order(q).map(({ o, j }) => `<label class="option"><input type="radio" name="q${i}" value="${j}" required> <span>${esc(o)}</span></label>`).join("")}</div><div class="quiz-nav">${i ? '<button type="button" class="btn secondary prev">Anterior</button>' : "<span></span>"}${i < Q.length - 1 ? '<button type="button" class="btn primary next">Próxima</button>' : '<button type="submit" class="btn primary">Finalizar quiz</button>'}</div></div>`).join("");
+    const qsA = [...form.querySelectorAll(".question")];
+    function show(n) { qsA.forEach((q, i) => q.classList.toggle("active", i === n)); qs("questionCount").textContent = `Questão ${n + 1} de ${Q.length}`; qs("quizBar").style.width = ((n + 1) / Q.length * 100) + "%" }
+    form.addEventListener("click", e => { if (e.target.classList.contains("next")) { if (!qsA[current].querySelector("input:checked")) return alert("Selecione uma resposta."); show(++current) } if (e.target.classList.contains("prev")) show(--current) });
+    form.addEventListener("submit", e => {
+        e.preventDefault(); if (!qsA[current].querySelector("input:checked")) return alert("Selecione uma resposta.");
+        let score = 0; Q.forEach((q, i) => { const a = form.querySelector(`input[name="q${i}"]:checked`); if (a && Number(a.value) === 0) score++ });
+        const s = getState(); s.scores[t.id] = Math.round(score / Q.length * 100); saveState(s); location.href = "resultado.html?track=" + id
+    }); show(0)
+}
+
+function initResultado() {
+    if (!qs("resultTitle")) return; const t = pubTrack(param("track")), sc = t ? getState().scores[t.id] : null; if (sc == null) { location.replace("trilhas.html"); return }
+    const ok = sc >= 70, id = encodeURIComponent(t.id); qs("scoreValue").textContent = sc + "%"; qs("resultTitle").textContent = ok ? "Parabéns!" : "Quase lá!";
+    qs("resultText").textContent = ok ? "Você foi aprovado e já pode emitir seu certificado de conclusão." : "Você precisa de pelo menos 70% para concluir a trilha. Revise os materiais e tente novamente.";
+    qs("resultIcon").textContent = ok ? "✓" : "!"; qs("resultAction").textContent = ok ? "Emitir certificado" : "Refazer quiz"; qs("resultAction").href = (ok ? "certificado.html" : "quiz.html") + "?track=" + id
+}
+
+
+function initCertificado() {
+
+    const certificate = qs("certificate");
+    if (!certificate) return;
+
+    const s = getState();
+
+    // Garante que a coleção de certificados exista
+    s.certs = s.certs || {};
+
+    const list = qs("certificateList");
+    const view = qs("certificateView");
+    const items = qs("certificateItems");
+
+    const trackId = param("track");
+
+    // ==========================================
+    // LISTAR TODOS OS CERTIFICADOS
+    // ==========================================
+
+    if (!trackId) {
+
+        list.hidden = false;
+        view.hidden = true;
+
+        const available = pubTracks()
+            .map(t => ({
+                track: t,
+                cert: s.certs[t.id],
+                ready: eligible(t)
+            }))
+            .filter(item => item.cert || item.ready);
+
+        if (!available.length) {
+
+            items.innerHTML = `
+                <div class="empty-state">
+                    <h3>Nenhum certificado disponível</h3>
+
+                    <p>
+                        Conclua uma trilha e cumpra os requisitos
+                        para liberar seu certificado.
+                    </p>
+
+                    <a href="trilhas.html" class="btn primary">
+                        Explorar trilhas
+                    </a>
+                </div>
+            `;
+
+            return;
+        }
+
+        items.innerHTML = available.map(item => {
+
+            const t = item.track;
+            const cert = item.cert;
+
+            return `
+                <article class="certificate-card">
+
+                    <div class="certificate-card-top">
+
+                        <span class="tag">
+                            ${cert ? "Emitido" : "Disponível"}
+                        </span>
+
+                        <span class="certificate-icon">🏆</span>
+
+                    </div>
+
+                    <h2>${esc(t.title)}</h2>
+
+                    <p>
+                        ${esc(t.description || "Certificado de conclusão")}
+                    </p>
+
+                    <div class="certificate-card-info">
+
+                        <span>
+                            Carga horária:
+                            <strong>${t.hours || 0} horas</strong>
+                        </span>
+
+                        ${
+                            cert
+                            ? `<span>
+                                Emitido em:
+                                <strong>${new Date(cert.date).toLocaleDateString("pt-BR")}</strong>
+                               </span>`
+                            : `<span>Requisitos concluídos.</span>`
+                        }
+
+                    </div>
+
+                    ${
+                        cert
+                        ? `<small>Código: ${esc(cert.code)}</small>`
+                        : ""
+                    }
+
+                    <a
+                        class="btn primary full"
+                        href="certificado.html?track=${encodeURIComponent(t.id)}"
+                    >
+                        ${cert ? "Visualizar certificado" : "Emitir certificado"}
+                    </a>
+
+                </article>
+            `;
+
+        }).join("");
+
+        return;
+    }
+
+    // ==========================================
+    // VISUALIZAR CERTIFICADO SELECIONADO
+    // ==========================================
+
+    const t = pubTrack(trackId);
+
+    // Permite visualizar certificados já emitidos,
+    // mesmo que a condição de conclusão seja alterada depois.
+    if (!t || (!s.certs[t.id] && !eligible(t))) {
+
+        list.hidden = false;
+        view.hidden = true;
+
+        items.innerHTML = `
+            <div class="empty-state">
+                <h3>Certificado indisponível</h3>
+
+                <p>
+                    Você ainda não cumpriu os requisitos
+                    necessários para emitir este certificado.
+                </p>
+
+                <a href="trilhas.html" class="btn primary">
+                    Ver trilhas
+                </a>
+            </div>
+        `;
+
+        return;
+    }
+
+    // Emite somente se ainda não existir certificado
+    if (!s.certs[t.id]) {
+
+        s.certs[t.id] = {
+            date: new Date().toISOString(),
+
+            code: "FORM-" +
+                new Date().getFullYear() + "-" +
+                Math.random()
+                    .toString(36)
+                    .slice(2, 8)
+                    .toUpperCase()
+        };
+
+        saveState(s);
+    }
+
+    const cert = s.certs[t.id];
+
+    list.hidden = true;
+    view.hidden = false;
+
+    qs("certificateName").textContent = cap(s.userName);
+    qs("certTrack").textContent = t.title;
+    qs("certHours").textContent = (t.hours || 0) + " horas";
+
+    qs("certificateDate").textContent =
+        new Date(cert.date).toLocaleDateString("pt-BR");
+
+    qs("certCode").textContent = cert.code;
+}
+
+
+/* Página "Conteúdos": consulta dos materiais de cada trilha publicada.
+   Usa funções que já existem em store.js e app.js (pubTracks, trackTrainings,
+   trackContents, prog, getState, esc, qs). */
+
+const cIcone = t => t === "PDF" ? "PDF" : t === "Vídeo" ? "▶" : "▤";
+const cArquivo = f => typeof f === "string" ? f : (f && (f.name || f.title)) || "";
+
+function renderConteudos() {
+    const box = qs("conteudoList"), s = getState();
+    const termo = qs("busca").value.trim().toLowerCase(), tipo = qs("tipo").value;
+    const tracks = pubTracks();
+    const match = c => (!tipo || c.type === tipo) && (!termo || (c.title || "").toLowerCase().includes(termo));
+    let total = 0;
+
+    const html = tracks.map(t => {
+        const id = encodeURIComponent(t.id), p = prog(t);
+
+        const blocos = trackTrainings(t).map(x => {
+            const cs = (x.contents || []).filter(match);
+            // documentos complementares não têm tipo: só aparecem quando o filtro de tipo está em "Todos"
+            const arquivos = tipo ? [] : (x.files || []).map(cArquivo)
+                .filter(f => f && (!termo || f.toLowerCase().includes(termo)));
+            if (!cs.length && !arquivos.length) return "";
+            total += cs.length + arquivos.length;
+
+            return `<article class="module">
+        <div class="module-head"><h3>${esc(x.title)}</h3><span>${cs.length + arquivos.length} item(ns)</span></div>
+        <div class="lessons">
+          ${cs.map(c => {
+                const ok = s.done.includes(c.id);
+                return `<div class="lesson ${ok ? "done" : ""}">
+              <div class="lesson-type">${cIcone(c.type)}</div>
+              <div class="lesson-info"><strong>${esc(c.title)}</strong>
+                <span>${esc(c.type)}${c.duration ? " • " + esc(c.duration) : ""}${ok ? " • Concluído" : ""}</span></div>
+              <a class="btn secondary" href="estudo.html?track=${id}&training=${encodeURIComponent(x.id)}&content=${encodeURIComponent(c.id)}&modo=consulta">Abrir</a>
+            </div>`;
+            }).join("")}
+          ${arquivos.map(f => `<div class="lesson">
+              <div class="lesson-type">▤</div>
+              <div class="lesson-info"><strong>${esc(f)}</strong><span>Documento complementar</span></div>
+            </div>`).join("")}
+        </div>
+      </article>`;
+        }).join("");
+
+        if (!blocos) return "";
+        return `<section class="conteudo-trilha">
+      <div class="conteudo-head">
+        <div><span class="tag">${esc(t.level)}</span><h2>${esc(t.title)}</h2></div>
+        ${concluida(t) ? botaoConcluido() : `<a class="btn secondary" href="biblioteca.html?track=${id}">Ir para a trilha</a>`}
+      </div>
+      
+      
+      ${blocos}
+    </section>`;
+    }).join("");
+
+    box.innerHTML = html || `<div class="empty-state">${tracks.length ? "Nenhum material encontrado para esse filtro." : "Nenhuma trilha publicada no momento."}</div>`;
+    qs("contagem").textContent = total + " material(is)";
+}
+
+
+function initConteudo() {
+    if (!qs("conteudoList")) return;
+    // opções do filtro = tipos que realmente existem nos conteúdos publicados
+    const tipos = [...new Set(pubTracks().flatMap(t => trackContents(t)).map(c => c.type).filter(Boolean))];
+    qs("tipo").innerHTML = '<option value="">Todos os tipos</option>' +
+        tipos.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+    qs("busca").addEventListener("input", renderConteudos);
+    qs("tipo").addEventListener("change", renderConteudos);
+    renderConteudos();
+}
+
+
+// Disponibiliza funções usadas pelos atributos onclick do HTML.
+Object.assign(window, { logout, toggleDone, initBiblioteca });
+
+document.addEventListener("DOMContentLoaded", async () => {
+    if (!qs("loginForm") && !getState().loggedIn) {
+        location.replace("index.html");
+        return;
+    }
+
+    try {
+        const dados = await carregarCatalogo();
+
+        dadosTracks = dados.tracks || [];
+        dadosTrainings = dados.trainings || [];
+
+        initLogin();
+        initDashboard();
+        initTrilhas();
+        initTrilha();
+        initBiblioteca();
+        initEstudo();
+        initQuiz();
+        initResultado();
+        initCertificado();
+        initConteudo();
+    } catch (erro) {
+        console.error("[FormaTI/app] Erro ao carregar catálogo:", erro);
+
+        const mensagem =
+            "Não foi possível carregar as trilhas agora. Atualize a página e tente novamente.";
+
+        ["publicTrackList", "dashTracks", "publicTrackContent",
+         "publicTrainingList", "conteudoList"].forEach(id => {
+            const elemento = qs(id);
+            if (elemento) {
+                elemento.innerHTML =
+                    `<div class="empty-state">${mensagem}</div>`;
+            }
+        });
+    }
+});

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>FormaTI | Gestão</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <script>const s = JSON.parse(localStorage.getItem('formatiAdminSession') || 'null'); location.replace(s?.authenticated ? 'admin.html' : 'admin-login.html');</script>
+</body>
+
+</html>
