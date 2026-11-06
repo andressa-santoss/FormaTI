@@ -17,10 +17,46 @@ const pubTrack = id => pubTracks().find(t => t.id === id);
 const trackTrainings = t => (t.trainingIds || [])
     .map(id => dadosTrainings.find(x => x.id === id && x.published === true))
     .filter(Boolean);
+
+
+
 const trackContents = t => trackTrainings(t).flatMap(x => x.contents || []);
-function prog(t) { const ids = trackContents(t).map(c => c.id), d = ids.filter(i => getState().done.includes(i)).length; return { done: d, total: ids.length, pct: ids.length ? Math.round(d / ids.length * 100) : 0 } }
+
+
+function prog(t) {
+    const ids = trackContents(t).map(c => c.id);
+    const state = getState();
+    const d = ids.filter(i => state.done.includes(i)).length;
+
+    const todosConteudosConcluidos = ids.length > 0 && d === ids.length;
+
+    let pct = ids.length
+        ? Math.round(d / ids.length * 100)
+        : 0;
+
+    if (todosConteudosConcluidos) {
+        pct = quizOf(t)
+            ? ((state.scores[t.id] ?? 0) >= 70 ? 100 : 90)
+            : 100;
+    }
+
+    return {
+        done: d,
+        total: ids.length,
+        pct
+    };
+}
+
+
+
 const quizOf = t => { const q = trackTrainings(t).flatMap(x => x.quiz || []), all = q.length ? q : (t.quiz || []); return all.length ? all : null };
-const canQuiz = t => { const p = prog(t); return p.total > 0 && p.pct === 100 };
+
+const canQuiz = t => {
+    const p = prog(t);
+    return p.total > 0 && p.done === p.total;
+};
+
+
 const eligible = t => canQuiz(t) && (quizOf(t) ? (getState().scores[t.id] ?? 0) >= 70 : true);
 /* Trilha concluída: com quiz, quando o aluno é aprovado (nota >= 70);
    sem quiz, quando o certificado é emitido (senão bloquearia ao marcar o último conteúdo). */
@@ -71,12 +107,12 @@ function initEstudo() {
     if (!c) { b.innerHTML = notFound("Conteúdo não encontrado."); return }
     // trilha concluída: só é possível ver o material pela tela de Conteúdos (modo=consulta)
     if (param("modo") !== "consulta" && bloqueiaConcluida(t)) return;
-    
+
     const consulta = param("modo") === "consulta";
-const back = consulta ? "conteudo.html" : "biblioteca.html?track=" + encodeURIComponent(t.id);
-qs("backLink").href = back;
-if (consulta) qs("backLink").textContent = "← Voltar para conteúdos";
-    
+    const back = consulta ? "conteudo.html" : "biblioteca.html?track=" + encodeURIComponent(t.id);
+    qs("backLink").href = back;
+    if (consulta) qs("backLink").textContent = "← Voltar para conteúdos";
+
     const done = getState().done.includes(c.id), yt = c.type === "Vídeo" ? ytId(c.url) : "", url = safeUrl(c.url); let media;
     if (yt) media = `<div class="youtube-player"><iframe src="https://www.youtube.com/embed/${yt}?rel=0" title="${esc(c.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`;
     else if (c.type === "PDF" && url) { const src = url.replace(/(drive\.google\.com\/file\/d\/[\w-]+)\/(view|edit).*$/, "$1/preview"); media = `<div class="pdf-viewer"><iframe src="${esc(src)}" title="${esc(c.title)}" allowfullscreen></iframe></div><p class="muted" style="margin-top:10px">Se o PDF não carregar aqui, use “Abrir recurso”: alguns sites bloqueiam a visualização incorporada.</p>` }
@@ -196,22 +232,20 @@ function initCertificado() {
                             <strong>${t.hours || 0} horas</strong>
                         </span>
 
-                        ${
-                            cert
-                            ? `<span>
+                        ${cert
+                    ? `<span>
                                 Emitido em:
                                 <strong>${new Date(cert.date).toLocaleDateString("pt-BR")}</strong>
                                </span>`
-                            : `<span>Requisitos concluídos.</span>`
-                        }
+                    : `<span>Requisitos concluídos.</span>`
+                }
 
                     </div>
 
-                    ${
-                        cert
-                        ? `<small>Código: ${esc(cert.code)}</small>`
-                        : ""
-                    }
+                    ${cert
+                    ? `<small>Código: ${esc(cert.code)}</small>`
+                    : ""
+                }
 
                     <a
                         class="btn primary full"
@@ -341,7 +375,7 @@ function renderConteudos() {
         return `<section class="conteudo-trilha">
       <div class="conteudo-head">
         <div><span class="tag">${esc(t.level)}</span><h2>${esc(t.title)}</h2></div>
-        ${concluida(t) ? botaoConcluido() : `<a class="btn secondary" href="biblioteca.html?track=${id}">Ir para a trilha</a>`}
+        <a class="btn secondary" href="biblioteca.html?track=${id}">Ir para a trilha</a>
       </div>
       
       
@@ -398,12 +432,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             "Não foi possível carregar as trilhas agora. Atualize a página e tente novamente.";
 
         ["publicTrackList", "dashTracks", "publicTrackContent",
-         "publicTrainingList", "conteudoList"].forEach(id => {
-            const elemento = qs(id);
-            if (elemento) {
-                elemento.innerHTML =
-                    `<div class="empty-state">${mensagem}</div>`;
-            }
-        });
+            "publicTrainingList", "conteudoList"].forEach(id => {
+                const elemento = qs(id);
+                if (elemento) {
+                    elemento.innerHTML =
+                        `<div class="empty-state">${mensagem}</div>`;
+                }
+            });
     }
 });
+
+
+

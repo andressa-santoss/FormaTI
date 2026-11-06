@@ -468,9 +468,22 @@ nav a:hover {
     color: var(--muted)
 }
 
-.lesson.done .lesson-info strong {
+/* .lesson.done .lesson-info strong {
     text-decoration: line-through;
     color: var(--muted)
+} */
+
+
+/* Conteúdos concluídos: somente na Biblioteca */
+#publicTrainingList .lesson.done .lesson-info strong {
+    color: #999;
+    text-decoration: none;
+}
+
+/* Riscar conteúdos concluídos somente na Biblioteca */
+#publicTrainingList .lesson.done .lesson-info strong {
+    color: #999;
+    text-decoration: line-through;
 }
 
 .check {
